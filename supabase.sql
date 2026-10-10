@@ -1,5 +1,6 @@
--- Ranking de "Especula o sobrevive"
--- Pégalo en Supabase → SQL Editor → New query → Run
+-- Ranking de "Especula o sobrevive" (prefijo viv_) en el proyecto "xogos"
+-- Se puede ejecutar varias veces sin romper nada.
+-- Supabase → SQL Editor → New query → pegar todo → Run
 
 create table if not exists public.viv_ranking (
   id uuid primary key default gen_random_uuid(),
@@ -13,17 +14,23 @@ create table if not exists public.viv_ranking (
   unique (user_id, modo, temporada)
 );
 
+-- Columnas nuevas: fortuna (o meses llegados) y personaje
+alter table public.viv_ranking add column if not exists extra bigint not null default 0;
+alter table public.viv_ranking add column if not exists avatar text;
+
 alter table public.viv_ranking enable row level security;
 
--- Cualquiera puede ver el ranking
+drop policy if exists "viv_ranking_leer" on public.viv_ranking;
 create policy "viv_ranking_leer" on public.viv_ranking
   for select using (true);
 
--- Cada jugador solo puede crear y cambiar su propia fila
+drop policy if exists "viv_ranking_insertar" on public.viv_ranking;
 create policy "viv_ranking_insertar" on public.viv_ranking
   for insert to authenticated with check (auth.uid() = user_id);
 
+drop policy if exists "viv_ranking_actualizar" on public.viv_ranking;
 create policy "viv_ranking_actualizar" on public.viv_ranking
   for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
 create index if not exists viv_ranking_orden on public.viv_ranking (modo, temporada, puntos desc);
+create index if not exists viv_ranking_fecha on public.viv_ranking (modo, temporada, updated_at desc);
